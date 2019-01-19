@@ -1,0 +1,59 @@
+{
+  "name": "@capnp-js/builder-arena",
+  "version": "0.4.0",
+  "description": "Cap'n Proto builder arena implementation.",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "gulp build",
+    "refresh": "rm -f package-lock.json && npm run clean && npm unpublish --force && rm -rf node_modules/@capnp-js/ && npm run build && npm publish",
+    "clean": "gulp clean",
+    "test-flow": "flow check --strip-root --show-all-errors --color=always",
+    "test-unit": "ava",
+    "test": "npm run test-flow && npm run test-unit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/capnp-js/builder-arena.git"
+  },
+  "author": "Tim Popham",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/capnp-js/builder-arena/issues"
+  },
+  "homepage": "https://github.com/capnp-js/builder-arena#readme",
+  "devDependencies": {
+    "@babel/core": "^7.1.5",
+    "@babel/plugin-transform-flow-strip-types": "^7.2.3",
+    "@babel/preset-env": "^7.1.5",
+    "@babel/register": "^7.0.0",
+    "ava": "^1.0.0-rc.2",
+    "babel-eslint": "^10.0.1",
+    "del": "^3.0.0",
+    "eslint-plugin-flowtype": "^2.42.0",
+    "flow-bin": "^0.86.0",
+    "gulp": "^4.0.0",
+    "gulp-babel": "^8.0.0",
+    "gulp-eslint": "^4.0.2",
+    "gulp-ext-replace": "^0.3.0",
+    "gulp-sourcemaps": "^2.6.4",
+    "gulp-uglify": "^3.0.1",
+    "rollup": "^0.67.1"
+  },
+  "dependencies": {
+    "@capnp-js/base-arena": "^0.4.0",
+    "@capnp-js/builder-core": "^0.4.0",
+    "@capnp-js/copy-pointers": "^0.4.0",
+    "@capnp-js/layout": "^0.4.0",
+    "@capnp-js/memory": "^0.4.0",
+    "@capnp-js/reader-core": "^0.4.0",
+    "@capnp-js/utf8": "^0.4.0"
+  },
+  "ava": {
+    "files": [
+      "test/unit/**/*.js"
+    ],
+    "require": [
+      "./test/register"
+    ]
+  }
+}
