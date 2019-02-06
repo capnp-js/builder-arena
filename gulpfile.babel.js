@@ -4,7 +4,6 @@ import gulp from "gulp";
 import babel from "gulp-babel";
 import eslint from "gulp-eslint";
 import ext from "gulp-ext-replace";
-import sourcemaps from "gulp-sourcemaps";
 import uglify from "gulp-uglify";
 
 import { rollup } from "rollup";
@@ -61,7 +60,8 @@ const eslintConfig = {
 export function clean() {
   return del([
     "browser/",
-    "lib/"
+    "coverage/",
+    "lib/",
   ], {force: true});
 }
 
@@ -72,12 +72,10 @@ function browserLib() {
   const presets = [["@babel/preset-env", {forceAllTransforms: true, modules: false}]];
 
   return gulp.src("src/**/*.js")
-    .pipe(sourcemaps.init())
     .pipe(eslint(eslintConfig))
     .pipe(eslint.format())
     .pipe(eslint.failAfterError())
     .pipe(babel({plugins: ["@babel/transform-flow-strip-types"], presets}))
-    .pipe(sourcemaps.write("."))
     .pipe(gulp.dest("browser/lib"));
 }
 
@@ -139,12 +137,10 @@ function cjsLib() {
   const presets = [["@babel/preset-env", {targets: {node: "8.9"}, modules: "commonjs"}]];
 
   return gulp.src("src/**/*.js")
-    .pipe(sourcemaps.init())
     .pipe(eslint(eslintConfig))
     .pipe(eslint.format())
     .pipe(eslint.failAfterError())
     .pipe(babel({plugins: ["@babel/transform-flow-strip-types"], presets}))
-    .pipe(sourcemaps.write("."))
     .pipe(gulp.dest("lib"));
 }
 

@@ -1,108 +1,121 @@
 /* @flow */
 
-import test from "ava";
+import * as assert from "assert";
+import { describe, it } from "mocha";
 import { Unlimited } from "@capnp-js/base-arena";
-
 import { Builder } from "../../src/index";
 
-test("instantiation widens for root", t => {
-  const arena = Builder.fresh(0, new Unlimited());
+describe("Builder", function () {
+  it("`fresh` construction leaves space for the root word", function () {
+    const arena = Builder.fresh(0, new Unlimited());
 
-  t.is(arena.segment(0).end, 8);
-});
+    assert.equal(arena.segment(0).end, 8);
+  });
 
-test("`getRoot`", t => {
-  t.plan(1);
+  describe(".getRoot", function () {
+    it("returns null after `fresh` construction", function () {
+      const arena = Builder.fresh(0, new Unlimited());
+      const root = arena.getRoot();
+      assert.equal(root, null);
+    });
+  });
 
-  const arena = Builder.fresh(0, new Unlimited());
+  describe(".allocate", function () {
+    const arena = Builder.fresh(128, new Unlimited());
 
-  const root = arena.getRoot();
+    it("moves `end` within the same segment while there exists sufficient space", function () {
+      const alloc1 = arena.allocate(24);
+      assert.equal(alloc1.position, 8);
+      assert.equal(alloc1.segment.end, 32);
 
-  t.is(root, null);
-});
+      const alloc2 = arena.allocate(104);
+      assert.equal(alloc2.position, 32);
+      assert.equal(alloc2.segment.end, 136);
+    });
 
-test("`allocate`", t => {
-  t.plan(8);
+    it("creates a new segment when insufficient space exists", function () {
+      assert.ok(arena.segment(0).raw.length - arena.segment(0).end < 16);
 
-  const arena = Builder.fresh(128, new Unlimited());
+      const alloc3 = arena.allocate(16);
+      assert.equal(alloc3.segment.id, 1);
+      assert.equal(alloc3.position, 0);
+      assert.equal(alloc3.segment.end, 16);
 
-  const alloc1 = arena.allocate(24);
-  t.is(alloc1.position, 8);
-  t.is(alloc1.segment.end, 32);
+      assert.ok(arena.segment(1).raw.length - arena.segment(0).end < 512);
+      const alloc4 = arena.allocate(512);
+      assert.equal(alloc4.segment.id, 2);
+      assert.equal(alloc4.position, 0);
+      assert.equal(alloc4.segment.end, 512);
+    });
+  });
 
-  const alloc2 = arena.allocate(96);
-  t.is(alloc2.position, 32);
-  t.is(alloc2.segment.end, 128);
+  describe(".preallocate", function () {
+    const arena = Builder.fresh(24, new Unlimited());
 
-  const alloc3 = arena.allocate(16);
-  t.is(alloc3.position, 0);
-  t.is(alloc3.segment.end, 16);
+    it("moves `end` within the same segment while there exists sufficient space", function () {
+      const prealloc1 = arena.preallocate(24, arena.segment(0));
+      assert.equal(prealloc1.segment.id, 0);
+      assert.equal(prealloc1.position, 8);
+      assert.equal(prealloc1.segment.end, 32);
+    });
 
-  const alloc4 = arena.allocate(512);
-  t.is(alloc4.position, 0);
-  t.is(alloc4.segment.end, 512);
-});
+    it("creates a new segment when insufficient space exists", function () {
+      assert.ok(arena.segment(0).raw.length - arena.segment(0).end < 16);
+      const prealloc2 = arena.preallocate(16, arena.segment(0));
+      assert.equal(prealloc2.segment.id, 1);
+      assert.equal(prealloc2.position, 8);
+      assert.equal(prealloc2.segment.end, 24);
+    });
+  });
 
-test("`preallocate`", t => {
-  t.plan(5);
+  describe(".write", function () {
+    const arena = Builder.fresh(504, new Unlimited());
 
-  const arena = Builder.fresh(24, new Unlimited());
+    it("transfers bytes from source to target", function () {
+      arena.allocate(504);
 
-  const prealloc1 = arena.preallocate(24, arena.segment(0));
-  t.is(prealloc1.position, 8);
-  t.is(prealloc1.segment.end, 32);
+      for (let i=0; i<256; ++i) {
+        arena.segment(0).raw[i] = i;
+        arena.segment(0).raw[i+256] = i;
+      }
 
-  const prealloc2 = arena.preallocate(16, arena.segment(0));
-  t.is(prealloc2.segment.id, 1);
-  t.is(prealloc2.position, 8);
-  t.is(prealloc2.segment.end, 24);
-});
+      const source = {
+        segment: arena.segment(0),
+        position: 129,
+      };
+      const target = {
+        segment: arena.segment(0),
+        position: 387,
+      };
+      arena.write(source, 31, target);
 
-test("`write`", t => {
-  t.plan(512);
+      for (let i=0; i<256; ++i) {
+        if (387-256 <= i && i < 387-256+31) {
+          assert.equal(arena.segment(0).raw[i], i);
+          assert.equal(arena.segment(0).raw[i+256], i-(387-256)+129);
+        } else {
+          assert.equal(arena.segment(0).raw[i], i);
+          assert.equal(arena.segment(0).raw[i+256], i);
+        }
+      }
+    });
+  });
 
-  let i;
-  const arena = Builder.fresh(504, new Unlimited());
-  arena.allocate(504);
+  describe(".zero", function () {
+    const arena = Builder.fresh(24, new Unlimited());
 
-  for (i=0; i<256; ++i) {
-    arena.segment(0).raw[i] = i;
-    arena.segment(0).raw[i+256] = i;
-  }
+    it("zeros bytes", function () {
+      let i;
 
-  const source = {
-    segment: arena.segment(0),
-    position: 129,
-  };
-  const target = {
-    segment: arena.segment(0),
-    position: 387,
-  };
-  arena.write(source, 31, target);
+      const alloc = arena.allocate(16);
+      for (i=8; i<24; ++i) {
+        alloc.segment.raw[i] = i;
+      }
+      arena.zero(alloc, 16);
 
-  for (let i=0; i<256; ++i) {
-    if (387-256 <= i && i < 387-256+31) {
-      t.is(arena.segment(0).raw[i], i);
-      t.is(arena.segment(0).raw[i+256], i-(387-256)+129);
-    } else {
-      t.is(arena.segment(0).raw[i], i);
-      t.is(arena.segment(0).raw[i+256], i);
-    }
-  }
-});
-
-test("`zero`", t => {
-  t.plan(16);
-
-  let i;
-  const arena = Builder.fresh(24, new Unlimited());
-  const alloc = arena.allocate(16);
-  for (i=8; i<24; ++i) {
-    alloc.segment.raw[i] = i;
-  }
-  arena.zero(alloc, 16);
-
-  for (i=8; i<24; ++i) {
-    t.is(alloc.segment.raw[i], 0);
-  }
+      for (i=8; i<24; ++i) {
+        assert.equal(alloc.segment.raw[i], 0);
+      }
+    });
+  });
 });
