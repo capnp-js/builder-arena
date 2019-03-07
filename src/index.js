@@ -32,6 +32,7 @@ import {
   Text,
   initStruct,
 } from "@capnp-js/builder-core";
+import { create, fill, getSubarray, get, set } from "@capnp-js/bytes";
 import { nonboolListTag } from "@capnp-js/copy-pointers";
 import {
   structHi,
@@ -57,7 +58,7 @@ export class Builder extends Base<SegmentB> implements SegmentLookup<SegmentB>, 
   //TODO: Move Unlimited from reader-arena to base-arena
   static fresh(bytes: uint, limiter: Limiter): this {
     bytes += 8;
-    const raw = new Uint8Array(bytes);
+    const raw = create(bytes);
     return new this([{id: 0, raw, end: 8}], limiter);
   }
 
@@ -92,7 +93,7 @@ export class Builder extends Base<SegmentB> implements SegmentLookup<SegmentB>, 
 
       const segment = {
         id: this.segments.length,
-        raw: new Uint8Array(this.nextSize),
+        raw: create(this.nextSize),
         end: length,
       };
       this.segments.push(segment);
@@ -148,12 +149,12 @@ export class Builder extends Base<SegmentB> implements SegmentLookup<SegmentB>, 
     let t = target.position;
     const end = t + length;
     for (; t<end; ++s, ++t) {
-      target.segment.raw[t] = source.segment.raw[s];
+      set(get(s, source.segment.raw), t, target.segment.raw);
     }
   }
 
   zero(begin: Byte<SegmentB>, length: uint): void {
-    begin.segment.raw.fill(0, begin.position, begin.position + length);
+    fill(0, begin.position, begin.position + length, begin.segment.raw);
   }
 
   initRoot<R: {+guts: StructGutsR}, B: ReaderCtor<StructGutsR, R>>(Ctor: StructCtorB<R, B>): B {
@@ -166,7 +167,8 @@ export class Builder extends Base<SegmentB> implements SegmentLookup<SegmentB>, 
   }
 
   setRoot(value: StructValueR | StructValue): void {
-    value.guts.set(0, this, root(this)); //TODO: Document how builder arenas must have an initial root word
+    //TODO: Document how builder arenas must have an initial root word
+    value.guts.set(0, this, root(this));
   }
 
   disownRoot(): null | Orphan<StructGutsR, StructValueR, StructValue> {
@@ -184,7 +186,8 @@ export class Builder extends Base<SegmentB> implements SegmentLookup<SegmentB>, 
   ): Orphan<StructGutsR, R, B> {
     const bytes = Ctor.compiledBytes();
     const wordAlignedLength = wordAligned.bytes(bytes.data + bytes.pointers);
-    const object = this.allocate(wordAlignedLength, bias); //TODO: Refactor preallocate to share the parameter ordering with allocate? Rename preallocate's `local` to `bias`?
+    //TODO: Refactor preallocate to share the parameter ordering with allocate? Rename preallocate's `local` to `bias`?
+    const object = this.allocate(wordAlignedLength, bias);
     return new Orphan(Ctor, this, {
       typeBits: 0x00,
       hi: structHi(bytes),
@@ -217,10 +220,11 @@ export class Builder extends Base<SegmentB> implements SegmentLookup<SegmentB>, 
         nonboolListTag(object, length, encoding.bytes);
       }
 
+      //TODO: Does `object` need to get incremented by 8? Add tests to verify that it's working properly.
       return new Orphan(Ctor, this, {
         typeBits: 0x01,
         hi: nonboolListHi(encoding, length),
-        object, //TODO: Does this need to get incremented by 8? Add tests to verify that it's working properly.
+        object,
       });
     }
   }
@@ -235,7 +239,7 @@ export class Builder extends Base<SegmentB> implements SegmentLookup<SegmentB>, 
     const object = this.allocate(wordAligned.bytes(length), bias);
     encode(
       ucs2,
-      object.segment.raw.subarray(object.position, object.position + length - 1),
+      getSubarray(object.position, object.position + length - 1, object.segment.raw),
     );
     const p = {
       typeBits: 0x01,

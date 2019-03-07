@@ -59,6 +59,7 @@ const eslintConfig = {
 
 export function clean() {
   return del([
+    ".nyc_output/",
     "browser/",
     "coverage/",
     "lib/",
@@ -85,6 +86,7 @@ function browserRollup() {
     external: [
       "@capnp-js/base-arena",
       "@capnp-js/builder-core",
+      "@capnp-js/bytes",
       "@capnp-js/copy-pointers",
       "@capnp-js/layout",
       "@capnp-js/memory",
@@ -99,6 +101,7 @@ function browserRollup() {
       globals: {
         "@capnp-js/base-arena": "capnpJsBaseArena",
         "@capnp-js/builder-core": "capnpJsBuilderCore",
+        "@capnp-js/bytes": "capnpJsBytes",
         "@capnp-js/copy-pointers": "capnpJsCopyPointers",
         "@capnp-js/layout": "capnpJsLayout",
         "@capnp-js/memory": "capnpJsMemory",

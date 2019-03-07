@@ -43,6 +43,7 @@
   "dependencies": {
     "@capnp-js/base-arena": "^0.4.0",
     "@capnp-js/builder-core": "^0.4.0",
+    "@capnp-js/bytes": "^0.4.0",
     "@capnp-js/copy-pointers": "^0.4.0",
     "@capnp-js/layout": "^0.4.0",
     "@capnp-js/memory": "^0.4.0",

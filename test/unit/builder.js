@@ -3,6 +3,8 @@
 import * as assert from "assert";
 import { describe, it } from "mocha";
 import { Unlimited } from "@capnp-js/base-arena";
+import { get, set } from "@capnp-js/bytes";
+
 import { Builder } from "../../src/index";
 
 describe("Builder", function () {
@@ -75,8 +77,8 @@ describe("Builder", function () {
       arena.allocate(504);
 
       for (let i=0; i<256; ++i) {
-        arena.segment(0).raw[i] = i;
-        arena.segment(0).raw[i+256] = i;
+        set(i, i, arena.segment(0).raw);
+        set(i, i+256, arena.segment(0).raw);
       }
 
       const source = {
@@ -91,11 +93,11 @@ describe("Builder", function () {
 
       for (let i=0; i<256; ++i) {
         if (387-256 <= i && i < 387-256+31) {
-          assert.equal(arena.segment(0).raw[i], i);
-          assert.equal(arena.segment(0).raw[i+256], i-(387-256)+129);
+          assert.equal(get(i, arena.segment(0).raw), i);
+          assert.equal(get(i+256, arena.segment(0).raw), i-(387-256)+129);
         } else {
-          assert.equal(arena.segment(0).raw[i], i);
-          assert.equal(arena.segment(0).raw[i+256], i);
+          assert.equal(get(i, arena.segment(0).raw), i);
+          assert.equal(get(i+256, arena.segment(0).raw), i);
         }
       }
     });
@@ -109,13 +111,22 @@ describe("Builder", function () {
 
       const alloc = arena.allocate(16);
       for (i=8; i<24; ++i) {
-        alloc.segment.raw[i] = i;
+        set(i, i, alloc.segment.raw);
       }
       arena.zero(alloc, 16);
 
       for (i=8; i<24; ++i) {
-        assert.equal(alloc.segment.raw[i], 0);
+        assert.equal(get(i, alloc.segment.raw), 0);
       }
     });
   });
+});
+
+describe("Pointer Copying", function () {
+  //text formatted inputs
+  //expected value: output canonical form
+  //actual value: output segmented binary for my library to intern, then copy to another arena, then pipe that through the reference implementation to canonical form
+
+
+
 });
